@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لعبة الفرق مع إجابة صحيحة</title>
+<style>
+body, html {
+    user-select: none;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    scrollbar-width: none;
+    background-image: url('background.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.container, .jeux {
+    width: 400px;
+    min-height: 300px;
+    background-color: rgb(235, 235, 235);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0px 0px 10px black;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.container input {
+    width: 200px;
+    height: 30px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: none;
+    padding: 5px;
+    text-align: center;
+}
+.container button {
+    width: 150px;
+    height: 35px;
+    background-color: rgb(0, 123, 255);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.container button:hover { background-color: rgb(0, 100, 200); }
+.jeux { display: none; flex-direction: column; }
+.scoreBar { width: 100%; display: flex; justify-content: space-between; margin-bottom: 20px; }
+.pg1, .pg2 { display: flex; align-items: center; gap: 10px; }
+.g1N, .g2N { width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; font-size: 30px; font-weight: bold; color: white; }
+.g1N { background-color: red; border-radius: 50% 0 0 50%; }
+.g2N { background-color: rgb(0, 123, 255); border-radius: 0 50% 50% 0; }
+.score { width: 50px; height: 50px; background-color: white; display: flex; justify-content: center; align-items: center; font-weight: bold; border-radius: 50%; box-shadow: 0px 0px 5px black; }
+.question { width: 100%; background-color: white; border-radius: 10px; padding: 10px; }
+.questionContent { font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; }
+.reponse { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.repContainer { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 350px; }
+.repText { flex: 1; font-size: 18px; }
+.repContainer button { width: 70px; height: 35px; border: none; border-radius: 5px; cursor: pointer; background-color: rgb(0, 123, 255); color: white; font-weight: bold; }
+.repContainer button:hover { opacity: 0.8; }
+#showAnswerBtn { margin-top: 15px; padding: 10px 20px; display: none; border: none; border-radius: 5px; cursor: pointer; background-color: orange; font-weight: bold; color: white; }
+#showAnswerBtn:hover { opacity: 0.8; }
+  canvas {
+    display: none;
+    width: 100px;
+  }
+  .block1 {
+    display: block;
+    position: absolute;
+    z-index: -1;
+  }
+  .block2 {
+    display: block;
+    position: absolute;
+    z-index: -1;
+    right: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <input type="text" id="g1Name" value="A" placeholder="اسم الفريق 1" maxlength="1">
+    <input type="text" id="g2Name" value="B" placeholder="اسم الفريق 2" maxlength="1">
+    <button id="creer">إنشاء الفرق</button>
+</div>
+
+<div class="jeux">
+    <div class="scoreBar">
+        <div class="pg1">
+            <div class="g1N"></div>
+            <div class="score"><p>0</p></div>
+        </div>
+        <div class="pg2">
+            <div class="score"><p>0</p></div>
+            <div class="g2N"></div>
+        </div>
+    </div>
+
+    <div class="question">
+        <div class="questionContent"></div>
+        <div class="reponse">
+            <div class="repContainer">
+                <span class="repText"></span>
+                <button class="btnG1">1</button>
+                <button class="btnG2">2</button>
+            </div>
+            <div class="repContainer">
+                <span class="repText"></span>
+                <button class="btnG1">1</button>
+                <button class="btnG2">2</button>
+            </div>
+            <div class="repContainer">
+                <span class="repText"></span>
+                <button class="btnG1">1</button>
+                <button class="btnG2">2</button>
+            </div>
+            <div class="repContainer">
+                <span class="repText"></span>
+                <button class="btnG1">1</button>
+                <button class="btnG2">2</button>
+            </div>
+        </div>
+    </div>
+
+    <button id="showAnswerBtn">إظهار الإجابة الصحيحة</button>
+</div>
+
+<audio src="videoplayback.m4a" id="correct"></audio>
+
+<script>
+const creerButton = document.getElementById('creer');
+const showAnswerBtn = document.getElementById('showAnswerBtn');
+let currentQuestion = 0, score1 = 0, score2 = 0;
+
+const Questions=[
+{ question:"ما هو الطعام الصحي؟", reponses:["البطاطا المقلية","التفاح","الحلوى","المشروبات الغازية"], correct:1 },
+{ question:"أي من هذه الأطعمة غير صحي؟", reponses:["الخبز","الجزر","البرغر","الموز"], correct:2 },
+{ question:"ماذا نشرب لنكون بصحة جيدة؟", reponses:["ماء","العصير الصناعي","المشروبات الغازية","مشروب الطاقة"], correct:0 },
+{ question:"لماذا لا يجب الإكثار من الحلوى؟", reponses:["لأنها لذيذة","لأنها مفيدة","لأنها تضر الأسنان","لأنها رخيصة"], correct:2 },
+{ question:"أي من هذه وجبة صحية؟", reponses:["سلطة خضراء","رقائق البطاطا","الشوكولاتة","الكعك"], correct:0 },
+{ question:"كم مرة يجب أن نأكل الفواكه يوميًا؟", reponses:["مرة واحدة فقط","لا نأكلها","عدة مرات","مرة في الأسبوع"], correct:2 },
+{ question:"ما هو المشروب الذي يجب التقليل منه؟", reponses:["الماء","الحليب","العصير الطبيعي","المشروبات الغازية"], correct:3 }
+];
+
+creerButton.addEventListener('click', ()=>{
+    const g1Name = document.getElementById('g1Name').value || 'A';
+    const g2Name = document.getElementById('g2Name').value || 'B';
+    document.querySelectorAll('.reponse .repContainer').forEach(container=>{
+        container.querySelector('.btnG1').textContent = g1Name;
+        container.querySelector('.btnG2').textContent = g2Name;
+    });
+    document.querySelector('.g1N').textContent = g1Name;
+    document.querySelector('.g2N').textContent = g2Name;
+    document.querySelector('.container').style.display='none';
+    document.querySelector('.jeux').style.display='flex';
+    showQuestion(currentQuestion);
+});
+
+function showQuestion(index){
+    let rep1=false;
+    let rep2=false;
+    const q = Questions[index];
+    document.querySelector('.questionContent').textContent = q.question;
+    const repContainers = document.querySelectorAll('.repContainer');
+    let answered = { g1:false, g2:false };
+    showAnswerBtn.style.display = 'none';
+
+    repContainers.forEach((container,i)=>{
+        container.querySelector('.repText').textContent = q.reponses[i];
+        container.querySelector('.btnG1').style.backgroundColor = 'rgb(0,123,255)';
+        container.querySelector('.btnG2').style.backgroundColor = 'rgb(0,123,255)';
+
+        container.querySelector('.btnG1').onclick = ()=>{
+            if(!answered.g1){
+                container.querySelector('.btnG1').style.backgroundColor='red';
+                document.querySelector('.pg1 .score p').textContent=score1;
+                if(q.correct === i) rep1 = true;
+                answered.g1 = true;
+                if(answered.g1 && answered.g2) showAnswerBtn.style.display = 'block';
+            }
+        }
+
+        container.querySelector('.btnG2').onclick = ()=>{
+            if(!answered.g2){
+                container.querySelector('.btnG2').style.backgroundColor='blue';
+                document.querySelector('.pg2 .score p').textContent=score2;
+                if(q.correct === i) rep2 = true;
+                answered.g2 = true;
+                if(answered.g1 && answered.g2) showAnswerBtn.style.display = 'block';
+            }
+        }
+    });
+
+showAnswerBtn.onclick = ()=>{
+    // تلوين الإجابة الصحيحة
+    if(rep1){ score1++;
+        repContainers[q.correct].querySelector('.btnG1').style.backgroundColor='green';
+        document.getElementById('correct').play();}
+    if(rep2){ score2++;
+        repContainers[q.correct].querySelector('.btnG2').style.backgroundColor='green';
+        document.getElementById('correct').play();}
+    document.querySelector('.pg1 .score p').textContent=score1;
+    document.querySelector('.pg2 .score p').textContent=score2;
+    showAnswerBtn.style.display = 'none';
+    // yes();
+
+    // الانتقال للسؤال التالي بعد 12 ثانية
+    setTimeout(()=>{
+        currentQuestion++;
+        if(currentQuestion < Questions.length){
+            showQuestion(currentQuestion);
+        } else {
+            alert(`انتهت اللعبة!\nالنتيجة:\n${document.getElementById('g1Name').value} = ${score1}\n${document.getElementById('g2Name').value} = ${score2}`);
+        }
+    },12000);
+}
+}
+// function yes(){
+//     const canvas = document.getElementById('fireworks');
+// const ctx = canvas.getContext('2d');
+
+// canvas.width = window.innerWidth;
+// canvas.height = window.innerHeight;
+
+// window.addEventListener('resize', () => {
+//   canvas.width = window.innerWidth;
+//   canvas.height = window.innerHeight;
+// });
+
+// class Firework {
+//   constructor(x, y) {
+//     this.x = x;
+//     this.y = y;
+//     this.particles = [];
+//     this.createParticles();
+//   }
+
+//   createParticles() {
+//     const colors = ['#ff4b5c','#ffb400','#00bdaa','#6a0572','#f72585'];
+//     for (let i = 0; i < 50; i++) {
+//       this.particles.push({
+//         x: this.x,
+//         y: this.y,
+//         angle: Math.random() * 2 * Math.PI,
+//         speed: Math.random() * 5 + 2,
+//         color: colors[Math.floor(Math.random() * colors.length)],
+//         alpha: 1,
+//         decay: Math.random() * 0.02 + 0.01
+//       });
+//     }
+//   }
+
+//   update() {
+//     this.particles.forEach(p => {
+//       p.x += Math.cos(p.angle) * p.speed;
+//       p.y += Math.sin(p.angle) * p.speed;
+//       p.alpha -= p.decay;
+//     });
+//     this.particles = this.particles.filter(p => p.alpha > 0);
+//   }
+
+//   draw() {
+//     this.particles.forEach(p => {
+//       ctx.globalAlpha = p.alpha;
+//       ctx.fillStyle = p.color;
+//       ctx.beginPath();
+//       ctx.arc(p.x, p.y, 3, 0, 2 * Math.PI);
+//       ctx.fill();
+//     });
+//     ctx.globalAlpha = 1;
+//   }
+
+//   done() {
+//     return this.particles.length === 0;
+//   }
+// }
+
+// let fireworks = [];
+// let animationActive = true;
+
+// function animate() {
+//   if (!animationActive) return; // توقف الإنميشن بعد 12s
+
+//   ctx.fillStyle = 'rgba(0,0,0,0.2)';
+//   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+//   if (Math.random() < 0.05) {
+//     fireworks.push(new Firework(Math.random() * canvas.width, Math.random() * canvas.height/2));
+//   }
+
+//   fireworks.forEach(fw => {
+//     fw.update();
+//     fw.draw();
+//   });
+
+//   fireworks = fireworks.filter(fw => !fw.done());
+
+//   requestAnimationFrame(animate);
+// }
+
+// animate();
+
+// // إيقاف الألعاب النارية بعد 12 ثانية
+// setTimeout(() => {
+//   animationActive = false;
+// }, 12000);
+// }
+</script>
+</body>
+</html>
